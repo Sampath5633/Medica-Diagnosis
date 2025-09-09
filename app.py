@@ -234,6 +234,21 @@ def predict():
         print("❌ Hugging Face proxy error:", str(e))
         return jsonify({"error": str(e)}), 500
 
+# === Proxy to Hugging Face for Re-Prediction ===
+@app.route("/repredict", methods=["POST"])
+def repredict():
+    try:
+        data = request.get_json()
+
+        # Forward request to Hugging Face /repredict
+        hf_url = "https://sampath563-medica-backend.hf.space/repredict"
+        response = requests.post(hf_url, json=data)
+        return jsonify(response.json()), response.status_code
+
+    except Exception as e:
+        print("❌ Hugging Face repredict proxy error:", str(e))
+        return jsonify({"error": str(e)}), 500
+
 
 # === Treatment Plan Generator ===
 @app.route("/api/treatment", methods=["POST"])
