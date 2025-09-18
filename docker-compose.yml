@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    image: python:3.9-slim
+    container_name: medical_backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             python app.py"
