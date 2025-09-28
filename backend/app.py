@@ -8,6 +8,22 @@ from flask_mail import Mail, Message
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
+import numpy as np
+from medication_patterns import default_patterns
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+from flask import Flask, request, jsonify, send_file
+# Temporary storage for prescriptions (you may replace with DB)
+PRESCRIPTIONS = {}
+from flask import Flask, request, jsonify
+from your_gemini_util import fetch_gemini_response 
+from flask_cors import CORS
+from flask_mail import Mail, Message
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 import traceback
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -251,18 +267,134 @@ def repredict():
 
 
 # === Treatment Plan Generator ===
+# === Treatment Endpoint ===
 @app.route("/api/treatment", methods=["POST"])
 def generate_treatment():
     try:
-        data = request.get_json()
-        query = (
-            f"{data['disease']} treatment for a {data['age']}-year-old patient "
-            f"with symptoms {data['symptoms']}, blood group {data['bloodGroup']}, duration {data['duration']}"
-        )
-        results = fetch_search_results(query)
-        return jsonify({"results": results})
+        
+
+        data = request.get_json(force=True)
+        disease = data.get("disease", "").strip()
+        symptoms = data.get("symptoms", [])
+        age = data.get("age")
+        blood_group = data.get("blood_group", "")
+        duration = data.get("duration")
+
+        if not disease or not symptoms or not age:
+            return jsonify({"error": "Missing required patient information"}), 400
+
+        # Construct prompt for Gemini
+        prompt = f"""
+You are an AI medical assistant.
+
+Patient Details:
+- Disease: {disease}
+- Age: {age}
+- Blood Group: {blood_group}
+- Symptoms: {', '.join(symptoms)}
+- Duration: {duration} days
+
+Instructions:
+1. Generate exactly 3 medications strictly based on the disease (ignore symptoms).
+2. Return a JSON ONLY with the format:
+{{
+  "medications": ["Medicine1", "Medicine2", "Medicine3"],
+  "lifestyle": ["point1", "point2", "point3"],
+  "followup": "short sentence about follow-up"
+}}
+3. Do NOT include any explanations or extra text.
+"""
+
+        treatment_data = fetch_gemini_response(prompt)  # Your Gemini fetch function
+
+        # Add intake/timing
+        normalized_patterns = {k.lower(): v for k, v in default_patterns.items()}
+        for med in treatment_data.get("medications", []):
+            med_name_lower = med["name"].lower()
+            if med_name_lower in normalized_patterns:
+                pattern = normalized_patterns[med_name_lower]
+                med["intake"] = pattern.split(' ')[0]
+                med["timing"] = ' '.join(pattern.split(' ')[1:])
+            else:
+                med["intake"] = "1-0-1"
+                med["timing"] = "after food"
+
+        full_prescription = {
+            "disease": disease,
+            "age": age,
+            "symptoms": symptoms,
+            "blood_group": blood_group,
+            "duration": duration,
+            "treatment": treatment_data
+        }
+
+        return jsonify(full_prescription), 200
+
     except Exception as e:
+        print(f"❌ Treatment endpoint error: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/treatment/download", methods=["POST"])
+def download_prescription():
+    try:
+        data = request.get_json(force=True)
+        prescription = data  # expects full prescription JSON
+
+        filename = "prescription.pdf"
+        os.makedirs("prescriptions", exist_ok=True)
+        filepath = os.path.join("prescriptions", filename)
+
+        c = canvas.Canvas(filepath, pagesize=letter)
+        width, height = letter
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(100, height - 50, "Doctor’s Prescription")
+
+        y = height - 90
+        c.setFont("Helvetica", 12)
+        c.drawString(100, y, f"Disease: {prescription.get('disease', '')}")
+        y -= 20
+        c.drawString(100, y, f"Age: {prescription.get('age', '')}")
+        y -= 20
+        c.drawString(100, y, f"Blood Group: {prescription.get('blood_group', '')}")
+        y -= 20
+        c.drawString(100, y, f"Symptoms: {', '.join(prescription.get('symptoms', []))}")
+        y -= 20
+        c.drawString(100, y, f"Duration: {prescription.get('duration', '')} days")
+        y -= 30
+
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(100, y, "🩺 Medications:")
+        y -= 20
+        c.setFont("Helvetica", 12)
+        for med in prescription.get("treatment", {}).get("medications", []):
+            c.drawString(120, y, f"- {med['name']} ({med['intake']}, {med['timing']})")
+            y -= 20
+
+        y -= 10
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(100, y, "🍎 Lifestyle Recommendations:")
+        y -= 20
+        c.setFont("Helvetica", 12)
+        for life in prescription.get("treatment", {}).get("lifestyle", []):
+            c.drawString(120, y, f"- {life}")
+            y -= 20
+
+        y -= 10
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(100, y, "📅 Follow-up:")
+        y -= 20
+        c.setFont("Helvetica", 12)
+        c.drawString(120, y, prescription.get("treatment", {}).get("followup", ""))
+
+        c.save()
+
+        return send_file(filepath, as_attachment=True)
+
+    except Exception as e:
+        print(f"❌ Could not generate PDF: {e}")
+        return jsonify({"error": "Could not generate PDF"}), 500
 
 # === Health Check Endpoints ===
 @app.route("/api/ping-db", methods=["GET"])
