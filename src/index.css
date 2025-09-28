@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.login-outer {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(to right, #000428, #004e92);
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-side-bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background: url('https://images.unsplash.com/photo-1612287230202-fd157f1e2f4c?auto=format&fit=crop&w=800&q=80') no-repeat center;
+  background-size: cover;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.login-glass-card {
+  z-index: 1;
+  width: 90%;
+  max-width: 420px;
+  padding: 30px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(2, 0, 36, 0.37);
+  backdrop-filter: blur(12px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  animation: slideFade 0.7s ease;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-input {
+  padding: 12px 14px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 15px;
+  outline: none;
+  transition: 0.3s ease;
+}
+
+.login-input:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid #00ffd5;
+}
+
+.login-btn {
+  padding: 12px;
+  background: linear-gradient(to right, #43e97b, #38f9d7);
+  color: #000;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 5px;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover {
+  transform: scale(1.03);
+}
+
+.login-timer {
+  font-size: 13px;
+  color: #ddd;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.login-resend {
+  margin-top: 10px;
+  background: none;
+  color: #0ff;
+  text-decoration: underline;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-success {
+  color: #b6ffb6;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.login-error {
+  color: #ff7b7b;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.login-register {
+  margin-top: 18px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.login-register a {
+  color: #ffeb3b;
+  text-decoration: underline;
+}
+
+@keyframes slideFade {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0px);
+    opacity: 1;
+  }
+}
+.glow-button {
+  padding: 12px;
+  background: linear-gradient(90deg, #00bcd4, #0097a7);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+}
+
+.glow-button::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(120deg, #00e5ff, #00bcd4, #0097a7, #00e5ff);
+  background-size: 400% 400%;
+  animation: glow 6s linear infinite;
+  filter: blur(8px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glow-button:hover::before {
+  opacity: 1;
+}
+
+@keyframes glow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.glass-input {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 0 4px rgba(0, 229, 255, 0.2);
+}
+
+.glass-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.glass-input:focus {
+  border: 1px solid #00e5ff;
+  box-shadow: 0 0 8px #00e5ff, 0 0 16px rgba(0, 229, 255, 0.4);
+}
+/* in your CSS or tailwind config */
+.hanging-indent {
+  display: block;
+  white-space: pre-wrap;
+  padding-left: 1.5rem; /* indent for bullet */
+  text-indent: -1.5rem; /* pull bullet back */
+}
