@@ -1,0 +1,32 @@
+plugins = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "D:\\project-bolt\\project\\dist"
+publishOrigin = "ui"
+commandOrigin = "ui"
+command = "pnpm run build"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[headers]]
+for = "/*.js"
+
+[headers.values]
+Content-Type = "application/javascript"
