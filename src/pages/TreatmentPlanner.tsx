@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Activity, HeartPulse } from 'lucide-react';
 import FullNavigationBar from '../components/FullNavigationBar';
 import NavigationBar from '../components/NavigationBar';
+import jsPDF from "jspdf";
 
 const TreatmentPlanner: React.FC = () => {
   const location = useLocation();
@@ -23,6 +24,9 @@ const TreatmentPlanner: React.FC = () => {
   const [showStandardTreatment, setShowStandardTreatment] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const [treatmentId, setTreatmentId] = useState<string | null>(null);
+const [prescriptionData, setPrescriptionData] = useState<any>(null);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -89,23 +93,145 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
       const data = await response.json();
 
-      if (data.results && Array.isArray(data.results)) {
-        const formatted = data.results.map((r: any) =>
-          `• ${r.title}\n${r.snippet}`
-        ).join('\n\n');
-        setDiagnosis(formData.disease);
-        setTreatmentPlan(formatted);
-      } else {
-        setError('No results found.');
-      }
-    } catch (err: any) {
-      const errorMessage = err.message || '❌ Failed to generate treatment plan. Please try again.';
-      setError(errorMessage);
-      console.error('Detailed error:', err);
-    } finally {
-      setLoading(false);
+    if (data.treatment) {
+      const t = data.treatment;
+      
+      
+
+      let plan = `--------------------------------
+Doctor’s Prescription
+--------------------------------
+Disease    : ${formData.disease}
+Age        : ${formData.age}
+Symptoms   : ${formData.symptoms}
+Blood Group: ${formData.bloodGroup}
+Duration   : ${formData.duration}\n`;
+
+      // 🩺 Medications
+    // 💊 Medications
+plan += '\n🩺 Medications:\n';
+if (Array.isArray(t.medications) && t.medications.length > 0) {
+  t.medications.forEach((m: any) => {
+    plan += `  - ${m.name} (${m.intake || "1-0-1"}, ${m.timing || "after food"})\n`;
+  });
+} else {
+  plan += '  - No medications prescribed\n';
+}
+
+// 🏡 Lifestyle
+plan += '\n🏡 Lifestyle:\n';
+if (Array.isArray(t.lifestyle) && t.lifestyle.length > 0) {
+  t.lifestyle.forEach((item: string) => {
+    plan += `  - ${item}\n`;
+  });
+} else {
+  plan += '  - No lifestyle advice provided\n';
+}
+
+// 📅 Follow-up
+plan += `\n📅 Follow-up:\n  ${t.followup || 'Consult doctor'}\n`;
+
+
+      // Footer
+      plan += '--------------------------------';
+
+      setTreatmentPlan(plan);
+      const symptomsArray: string[] = [];
+if (formData.symptoms) {
+  if (Array.isArray(formData.symptoms)) {
+    formData.symptoms.forEach(s => {
+      if (s) symptomsArray.push(s.trim());
+    });
+  } else if (typeof formData.symptoms === "string") {
+    formData.symptoms.split(",").forEach(s => {
+      if (s) symptomsArray.push(s.trim());
+    });
+  }
+}
+
+
+setPrescriptionData({
+  disease: formData.disease,
+  age: formData.age,
+  symptoms: symptomsArray,
+  blood_group: formData.bloodGroup,
+  duration: formData.duration,
+  treatment: t
+});
+
+
+
+
+      
+        if (data.id) {
+    setTreatmentId(data.id);
+  }
+
+    } else {
+      setError('No treatment data returned from API.');
     }
-  };
+
+  } catch (err: any) {
+    setError(err.message || '❌ Failed to generate treatment plan.');
+    console.error('Detailed error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+const handleDownloadPDF = (treatmentPlan: any) => {
+  try {
+    const { disease, age, symptoms, blood_group, duration, treatment } =
+      treatmentPlan;
+
+    const doc = new jsPDF();
+doc.setFontSize(14);
+doc.text("Doctor’s Prescription", 105, 20, { align: "center" });
+doc.setFontSize(11);
+doc.text("--------------------------------", 105, 28, { align: "center" });
+
+let y = 40;
+const lineHeight = 8;
+
+doc.text(`Disease    : ${disease}`, 20, y); y += lineHeight;
+doc.text(`Age        : ${age}`, 20, y); y += lineHeight;
+doc.text(`Symptoms   : ${symptoms && symptoms.length > 0 ? symptoms.join(", ") : "N/A"}`, 20, y);y += lineHeight;
+doc.text(`Blood Group: ${blood_group}`, 20, y); y += lineHeight;
+doc.text(`Duration   : ${duration} days`, 20, y); y += lineHeight + 4;
+
+// 💊 Medications
+doc.text("Medications:\n", 20, y); y += lineHeight;
+treatment.medications.forEach((med: any) => {
+    doc.text(`- ${med.name} (${med.intake}, ${med.timing})`, 30, y); 
+    y += lineHeight;
+});
+
+// 🏡 Lifestyle
+y += 4;
+doc.text("Lifestyle:\n", 20, y); y += lineHeight;
+treatment.lifestyle.forEach((item: string) => {
+    const lines = doc.splitTextToSize(`- ${item}`, 170); // wrap long text
+    doc.text(lines, 30, y);
+    y += lines.length * lineHeight;
+});
+
+// 📅 Follow-up
+y += 4;
+doc.text("Follow-up:\n", 20, y); y += lineHeight;
+const followupLines = doc.splitTextToSize(treatment.followup, 170);
+doc.text(followupLines, 30, y);
+y += followupLines.length * lineHeight;
+
+doc.text("--------------------------------", 105, y + 8, { align: "center" });
+doc.save(`prescription_${disease}_${Date.now()}.pdf`);
+
+  } catch (error) {
+    console.error("❌ Could not download PDF:", error);
+    alert("❌ Could not download prescription. Please try again.");
+  }
+};
+
 
   return (
   <>
@@ -278,51 +404,98 @@ const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
             )}
           </div>
 
-          {/* Right: Treatment Results */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="flex items-center mb-6">
-              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-800">Treatment Results</h3>
-            </div>
+           {/* Right: Treatment Results */}
+         <div className="bg-white rounded-2xl shadow-lg p-8">
+  <div className="flex items-center mb-6">
+    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+      <svg
+        className="w-4 h-4 text-green-600"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    </div>
+    <h3 className="text-xl font-semibold text-gray-800">
+      Treatment Results
+    </h3>
+  </div>
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-600">Processing patient information...</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {treatmentPlan ? (
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Treatment Plan
-                    </h4>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap text-gray-700 bg-white p-4 rounded border text-sm">{treatmentPlan}</pre>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-sm italic">
-                      Enter patient information and click "Generate Treatment Plan" to see results
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+  {loading ? (
+    <div className="flex flex-col items-center justify-center py-12">
+      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+      <p className="text-gray-600">Processing patient information...</p>
+    </div>
+  ) : (
+    <div className="space-y-6">
+      {treatmentPlan ? (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+          <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <svg
+              className="w-5 h-5 text-green-600 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Treatment Plan
+          </h4>
+
+          <div className="prose prose-sm max-w-none">
+            <pre className="hanging-indent text-gray-700 bg-white p-4 rounded border text-sm">
+  {treatmentPlan}
+</pre>
+
           </div>
+
+          {/* ✅ Download button */}
+         {prescriptionData && (
+  <button
+    onClick={() => handleDownloadPDF(prescriptionData)}
+    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition"
+  >
+    Download Prescription
+  </button>
+)}
+
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-12 h-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <p className="text-gray-500 text-sm italic">
+            Enter patient information and click "Generate Treatment Plan" to see results
+          </p>
+        </div>
+      )}
+    </div>
+  )}
+</div>
         </div>
       </div>
     </div>

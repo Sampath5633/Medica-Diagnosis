@@ -200,3 +200,10 @@
   border: 1px solid #00e5ff;
   box-shadow: 0 0 8px #00e5ff, 0 0 16px rgba(0, 229, 255, 0.4);
 }
+/* in your CSS or tailwind config */
+.hanging-indent {
+  display: block;
+  white-space: pre-wrap;
+  padding-left: 1.5rem; /* indent for bullet */
+  text-indent: -1.5rem; /* pull bullet back */
+}
