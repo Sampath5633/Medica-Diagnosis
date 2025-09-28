@@ -1,7 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Navigate, useNavigate } from "react-router-dom";
-const API_BASE = "https://medica-backend-3-qa12.onrender.com/api"; 
+
+
+
 const Login = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -63,13 +66,19 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Step 1: Send login request
-const handleStep1 = async (e: React.FormEvent) => {
+  const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoggedIn) return navigate("/home");
+    if (isLoggedIn) {
+      navigate("/home");
+      return;
+    }
+    console.log("📤 Sending login-step1 request with:", {
+      email: formData.email,
+      password: formData.password,
+    });
 
     try {
-      const res = await axios.post(`${API_BASE}/login-step1`, {
+      const res = await axios.post("https://medica-backend-3-qa12.onrender.com/api/login-step1", {
         email: formData.email,
         password: formData.password,
       });
@@ -83,7 +92,8 @@ const handleStep1 = async (e: React.FormEvent) => {
         setRequiresVerification(false);
         setIsLoggedIn(true);
         navigate("/home");
-      } else if (res.data.step === 2) {
+      }
+      else if (res.data.step === 2) {
         setMessage("📧 Verification code sent.");
         setTimeLeft(600);
         setStep(2);
@@ -98,13 +108,17 @@ const handleStep1 = async (e: React.FormEvent) => {
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem("isVerified", "true");
-    if (isLoggedIn) return navigate("/home");
 
+    if (isLoggedIn) {
+      navigate("/home");
+      return;
+    }
     try {
-      const res = await axios.post(`${API_BASE}/login-step2`, {
+      const res = await axios.post("https://medica-backend-3-qa12.onrender.com/api/login-step2", {
         email: formData.email,
         code: formData.code,
       });
+
       setMessage("✅ Login successful!");
       setError("");
       localStorage.setItem("token", res.data.token);
@@ -120,7 +134,7 @@ const handleStep1 = async (e: React.FormEvent) => {
   const handleResendCode = async () => {
     if (!requiresVerification) return;
     try {
-      await axios.post(`${API_BASE}/login-step1`, {
+      await axios.post("https://medica-backend-3-qa12.onrender.com/api/login-step1", {
         email: formData.email,
         password: formData.password,
       });
@@ -128,7 +142,7 @@ const handleStep1 = async (e: React.FormEvent) => {
       setError("");
       setTimeLeft(600);
       setStep(2);
-    } catch {
+    } catch (err: any) {
       setError("Could not resend code.");
       setMessage("");
     }
@@ -141,7 +155,9 @@ const handleStep1 = async (e: React.FormEvent) => {
   const handleForgotPasswordStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/send-reset-code`, { email: forgotPasswordData.email });
+      const res = await axios.post('https://medica-backend-3-qa12.onrender.com/api/send-reset-code', {
+        email: forgotPasswordData.email,
+      });
       setMessage("📧 Reset code sent to your email.");
       setError("");
       setTimeLeft(600);
@@ -155,17 +171,34 @@ const handleStep1 = async (e: React.FormEvent) => {
   const handleForgotPasswordStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     const { email, resetCode, newPassword, confirmPassword } = forgotPasswordData;
-    if (newPassword !== confirmPassword) return setError("Passwords do not match.");
-    if (newPassword.length < 6) return setError("Password must be at least 6 characters.");
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
 
     try {
-      await axios.post(`${API_BASE}/reset-password`, { email, code: resetCode, newPassword });
+      const res = await axios.post("https://medica-backend-3-qa12.onrender.com/api/reset-password", {
+        email,
+        code: resetCode,
+        newPassword,
+      });
       setMessage("✅ Password reset successful! Redirecting to login...");
       setError("");
       setTimeout(() => {
         setForgotPasswordMode(false);
         setForgotPasswordStep(1);
-        setForgotPasswordData({ email: "", resetCode: "", newPassword: "", confirmPassword: "" });
+        setForgotPasswordData({
+          email: "",
+          resetCode: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
         setMessage("");
       }, 2000);
     } catch (err: any) {
