@@ -1,8 +1,0 @@
-[build]
-  publish = "dist"
-  command = "npm run build"
-
-[[headers]]
-  for = "/*.js"
-  [headers.values]
-    Content-Type = "application/javascript"
