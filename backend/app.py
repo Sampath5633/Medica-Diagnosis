@@ -27,7 +27,6 @@ from dotenv import load_dotenv
 import traceback
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
-from serpapi_util import fetch_search_results
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from flask_cors import CORS
@@ -42,7 +41,7 @@ load_dotenv(dotenv_path=env_path)
 app = Flask(__name__)
 
 # === Enable CORS for frontend ===
-CORS(app, origins=["https://medica-3.netlify.app"], supports_credentials=True)
+CORS(app, origins=["https://medica3.netlify.app"], supports_credentials=True)
 
 
 @app.before_request

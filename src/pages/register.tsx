@@ -39,7 +39,7 @@ const Register = () => {
     }
 
     try {
-      const res = await axios.post("https://medica-backend-3.onrender.com/api/register", {
+      const res = await axios.post("https://medica-backend-3-qa12.onrender.com/api/register", {
         email,
         password,
       });

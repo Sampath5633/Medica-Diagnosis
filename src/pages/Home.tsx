@@ -14,7 +14,7 @@ function Home() {
     setStatus("Submitting...");
 
     try {
-      const res = await axios.post("https://medica-backend-3.onrender.com/api/feedback", {
+      const res = await axios.post("https://medica-backend-3-qa12.onrender.com/api/feedback", {
         email,
         message,
       });

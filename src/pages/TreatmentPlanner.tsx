@@ -85,7 +85,7 @@ const [prescriptionData, setPrescriptionData] = useState<any>(null);
     setShowStandardTreatment(false);
 
     try {
-      const response = await fetch('https://medica-backend-3.onrender.com/api/treatment', {
+      const response = await fetch('https://medica-backend-3-qa12.onrender.com/api/treatment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
