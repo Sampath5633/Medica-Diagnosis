@@ -107,7 +107,7 @@ const Login = () => {
 
   const handleStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem("isVerified", "true");
+    
 
     if (isLoggedIn) {
       navigate("/home");
@@ -118,7 +118,7 @@ const Login = () => {
         email: formData.email,
         code: formData.code,
       });
-
+      localStorage.setItem("isVerified", "true");
       setMessage("✅ Login successful!");
       setError("");
       localStorage.setItem("token", res.data.token);
