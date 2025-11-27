@@ -12,6 +12,7 @@ commandOrigin = "ui"
 command = "pnpm run build"
 
 [build.environment]
+GIT_SUBMODULE_STRATEGY = "none"    # 👈 THIS FIXES NETLIFY SUBMODULE ERROR
 
 [build.processing]
 
