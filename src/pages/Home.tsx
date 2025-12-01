@@ -299,7 +299,7 @@ function Home() {
                 message: formData.get('message'),
               };
               try {
-                const res = await fetch("https://medica-backend-3.onrender.com/api/feedback", {
+                const res = await fetch("https://medica-backend-3-qa12.onrender.com/api/feedback", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(payload),
