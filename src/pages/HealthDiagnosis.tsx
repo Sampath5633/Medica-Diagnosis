@@ -335,13 +335,12 @@ const HealthDiagnosis: React.FC = () => {
       const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
       const payload = {
-        symptoms: (
-          formData.symptoms +
-          (refineSymptoms.length ? `, ${refineSymptoms.join(", ")}` : "")
-        )
-          .split(",")
-          .map(s => s.trim())
-          .filter(Boolean),
+        symptoms:
+  (
+    formData.symptoms +
+    (refineSymptoms.length ? `, ${refineSymptoms.join(", ")}` : "")
+  ).trim(),  // ✅ STRING
+
 
         selected_symptoms: refineSymptoms,
 
