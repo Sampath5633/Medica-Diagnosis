@@ -241,15 +241,14 @@ const HealthDiagnosis: React.FC = () => {
       const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
       
       const payload = {
-        symptoms: formData.symptoms.split(',').map(s => s.trim()).filter(Boolean),
-        blood_pressure: formData.blood_pressure,
-        heart_rate: Number(formData.heart_rate),
-        age: Number(formData.age),
-        temperature: Number(formData.temperature),
-        oxygen_saturation: Number(formData.oxygen_saturation),
-        gender: formData.gender,
-        severity: formData.severity
-      };
+  symptoms: formData.symptoms.trim(),   // ✅ STRING (CRITICAL)
+  blood_pressure: formData.blood_pressure.trim(),
+  heart_rate: Number(formData.heart_rate),
+  age: Number(formData.age),
+  temperature: Number(formData.temperature),
+  oxygen_saturation: Number(formData.oxygen_saturation)
+};
+
 
       console.log("Sending payload:", payload);
 
