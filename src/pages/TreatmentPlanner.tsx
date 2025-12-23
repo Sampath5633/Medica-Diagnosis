@@ -45,7 +45,6 @@ const TreatmentPlanner: React.FC = () => {
     const normalizedInput = normalizeDisease(clean);
 
     // ✅ RULE 1: Match against ALL known diseases (normalized)
-    // This ensures "malaria", "MALARIA", "Malaria " all pass if they are in your list
     const knownNormalizedDiseases = Object.keys(DISEASE_SYMPTOMS).map(d =>
       normalizeDisease(d)
     );
@@ -56,22 +55,19 @@ const TreatmentPlanner: React.FC = () => {
 
     // --- If not in list, check if it's a plausible NEW disease ---
 
-    // ❌ RULE 2: Reject very short inputs (e.g. "p", "flu", "cold" might be too generic unless in list)
-    // We require at least 6 chars for unknown diseases to prevent spam
+    // ❌ RULE 2: Reject very short inputs
     if (clean.length < 6) return false;
 
-    // ❌ RULE 3: Reject symbols or numbers-only junk (e.g. "12345", "!!!")
+    // ❌ RULE 3: Reject symbols or numbers-only junk
     if (!/[a-zA-Z]/.test(clean)) return false; // Must have letters
     if (!/^[a-zA-Z0-9\s'-]+$/.test(clean)) return false; // No special symbols like @#$%
 
     const words = clean.split(/\s+/);
 
-    // ❌ RULE 4: Single-word unknown inputs are risky. Require at least 2 words.
-    // e.g. "Viral Fever" (Valid), "Unknown" (Invalid)
+    // ❌ RULE 4: Single-word unknown inputs are risky
     if (words.length < 2) return false;
 
     // ❌ RULE 5: Each word must be meaningful (at least 3 chars)
-    // Prevents "A B C D"
     if (words.some(w => w.length < 3)) return false;
 
     return true; // ✅ New, plausible disease name
@@ -146,10 +142,15 @@ const TreatmentPlanner: React.FC = () => {
     setShowStandardTreatment(false);
 
     try {
-      // ✅ LIVE BACKEND URL
-      const response = await fetch('https://medica-backend-3-qa12.onrender.com/api/treatment', {
+      // ✅ Use Env Variable for URL (with fallback)
+      const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${backendBaseUrl}/api/treatment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem("token")}` // ✅ Add Token
+        },
         body: JSON.stringify(formData),
       });
 
