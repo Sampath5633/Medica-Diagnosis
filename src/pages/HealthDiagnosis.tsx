@@ -33,6 +33,7 @@ interface BackendResponse {
   result: {
     [key: string]: BackendPrediction;
   };
+  error?: string;
 }
 
 interface FormData {
@@ -45,7 +46,8 @@ interface FormData {
   blood_pressure: string;
   oxygen_saturation: string;
 }
-const DISEASE_SYMPTOMS: Record<string, string[]> ={
+
+const DISEASE_SYMPTOMS: Record<string, string[]> = {
   "Addison's Disease": ["fatigue", "muscle weakness", "nausea", "weight loss"],
   "Allergic Reaction": ["itching", "nausea", "rash", "shortness of breath", "swelling"],
   "Alzheimer's Disease": ["confusion", "fatigue", "memory loss", "mood changes"],
@@ -125,7 +127,8 @@ const DISEASE_SYMPTOMS: Record<string, string[]> ={
   "Urinary Tract Infection": ["abdominal pain", "fever", "frequent urination", "nausea"],
   "Vertigo": ["balance problems", "dizziness", "nausea", "vomiting"],
   "Vitamin D Deficiency": ["bone pain", "fatigue", "mood changes", "muscle weakness"]
-}
+};
+
 const HealthDiagnosis: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     symptoms: '',
@@ -148,8 +151,7 @@ const HealthDiagnosis: React.FC = () => {
   const [oxygenSatError, setOxygenSatError] = useState<string | null>(null);
   const [symptomsError, setSymptomsError] = useState<string | null>(null);
   const [refineSymptoms, setRefineSymptoms] = useState<string[]>([]);
-const [refineLoading, setRefineLoading] = useState(false);
-
+  const [refineLoading, setRefineLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -235,24 +237,37 @@ const [refineLoading, setRefineLoading] = useState(false);
     }
 
     try {
-const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
+      // ✅ Use env variable for production, fallback for safety
+      const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      
       const payload = {
-        ...formData,
+        symptoms: formData.symptoms.split(',').map(s => s.trim()).filter(Boolean),
+        blood_pressure: formData.blood_pressure,
+        heart_rate: Number(formData.heart_rate),
         age: Number(formData.age),
         temperature: Number(formData.temperature),
-        heart_rate: Number(formData.heart_rate),
         oxygen_saturation: Number(formData.oxygen_saturation),
+        gender: formData.gender,
+        severity: formData.severity
       };
+
+      console.log("Sending payload:", payload);
 
       const response = await fetch(`${backendBaseUrl}/predict`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem("token")}` // ✅ Included Token
+        },
         body: JSON.stringify(payload),
       });
 
       let result: BackendResponse | null = null;
-      try { result = await response.json(); } 
-      catch { throw new Error(`Server returned status ${response.status} and non-JSON response`); }
+      try { 
+        result = await response.json(); 
+      } catch { 
+        throw new Error(`Server returned status ${response.status} and non-JSON response`); 
+      }
 
       if (!response.ok) throw new Error(result?.error || 'Failed to get prediction');
 
@@ -296,6 +311,7 @@ const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
     setPrediction(null);
     setError(null);
     setSymptomsError(null);
+    setRefineSymptoms([]);
   };
 
   const navigateToTreatment = () => {
@@ -308,6 +324,7 @@ const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
       },
     });
   };
+
   const handleRePredict = async () => {
     if (!prediction) return;
 
@@ -315,52 +332,76 @@ const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
     setError(null);
 
     try {
-const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
+      // ✅ Use env variable
+      const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
       const payload = {
-        ...formData,
-        symptoms: formData.symptoms + (refineSymptoms.length ? `, ${refineSymptoms.join(', ')}` : ''),
+        symptoms: (
+          formData.symptoms +
+          (refineSymptoms.length ? `, ${refineSymptoms.join(", ")}` : "")
+        )
+          .split(",")
+          .map(s => s.trim())
+          .filter(Boolean),
+
+        selected_symptoms: refineSymptoms,
+
+        // Extract Top 3 from existing predictions
+        top_diseases: Object.values(prediction.all_predictions || {})
+          .flatMap(p => p.top_predictions || [])
+          .map(tp => tp.disease)
+          .slice(0, 3),
+
+        blood_pressure: formData.blood_pressure,
+        heart_rate: Number(formData.heart_rate),
         age: Number(formData.age),
         temperature: Number(formData.temperature),
-        heart_rate: Number(formData.heart_rate),
         oxygen_saturation: Number(formData.oxygen_saturation),
+
+        model: "ensemble"
       };
 
-      const response = await fetch(`${backendBaseUrl}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const response = await fetch(`${backendBaseUrl}/repredict`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(payload)
       });
 
-      let result: BackendResponse | null = null;
-      try {
-        result = await response.json();
-      } catch {
-        throw new Error(`Server returned status ${response.status} and non-JSON response`);
+      const result: BackendResponse = await response.json();
+      if (!response.ok) {
+        throw new Error(result?.error || "Re-predict failed");
       }
 
-      if (!response.ok) throw new Error(result?.error || 'Failed to get prediction');
-
+      // ✅ Parse result same as /predict
       const backendPredictions = result.result || {};
-      const firstModelKey = Object.keys(backendPredictions)[0] || '';
+      const firstModelKey = Object.keys(backendPredictions)[0];
+
+      if (!firstModelKey) {
+        throw new Error("No predictions returned from repredict");
+      }
 
       const transformedPrediction: PredictionResult = {
-        predicted_disease: firstModelKey ? backendPredictions[firstModelKey].prediction : '',
-        confidence: firstModelKey ? backendPredictions[firstModelKey].confidence : 0,
-        all_predictions: {},
+        predicted_disease: backendPredictions[firstModelKey].prediction,
+        confidence: backendPredictions[firstModelKey].confidence,
+        all_predictions: {}
       };
 
       for (const [model, pred] of Object.entries(backendPredictions)) {
         transformedPrediction.all_predictions[model] = {
           disease: pred.prediction,
           confidence: pred.confidence,
-          top_predictions: pred.top_predictions || undefined,
+          top_predictions: pred.top_predictions
         };
       }
 
       setPrediction(transformedPrediction);
-      setRefineSymptoms([]); // reset after re-predict
+      setRefineSymptoms([]);
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setRefineLoading(false);
     }
@@ -645,58 +686,55 @@ const backendBaseUrl = import.meta.env.VITE_BACKEND_URL;
                       </div>
                     </div>
                   )}
+
                   {/* Refine Prediction Section */}
-{/* Refine Prediction Section */}
-{prediction && (
-  <div className="bg-green-50 border border-green-200 rounded-md p-4">
-    <h4 className="font-medium text-gray-800 mb-3">Refine Prediction</h4>
-    <p className="text-sm text-gray-600 mb-4">
-      Select symptoms you are experiencing from these:
-    </p>
+                  {prediction && (
+                    <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                      <h4 className="font-medium text-gray-800 mb-3">Refine Prediction</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Select symptoms you are experiencing from these possible matches:
+                      </p>
 
-    <div className="flex flex-wrap gap-2">
-      {[...new Set( // merge & remove duplicates
-        Object.values(prediction.all_predictions)
-          .flatMap((pred) => pred.top_predictions || [])
-          .slice(0, 3) // take top 3 diseases
-          .flatMap((tp) => DISEASE_SYMPTOMS[tp.disease] || [])
-      )].map((symptom) => (
-        <label
-          key={symptom}
-          className="flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm cursor-pointer hover:bg-blue-50"
-        >
-          <input
-            type="checkbox"
-            checked={refineSymptoms.includes(symptom)}
-            onChange={() =>
-              setRefineSymptoms((prev) =>
-                prev.includes(symptom)
-                  ? prev.filter((s) => s !== symptom)
-                  : [...prev, symptom]
-              )
-            }
-          />
-          <span>{symptom}</span>
-        </label>
-      ))}
-    </div>
+                      <div className="flex flex-wrap gap-2">
+                        {[...new Set( // merge & remove duplicates
+                          Object.values(prediction.all_predictions)
+                            .flatMap((pred) => pred.top_predictions || [])
+                            .slice(0, 3) // take top 3 diseases
+                            .flatMap((tp) => DISEASE_SYMPTOMS[tp.disease] || [])
+                        )].map((symptom) => (
+                          <label
+                            key={symptom}
+                            className="flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm cursor-pointer hover:bg-blue-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={refineSymptoms.includes(symptom)}
+                              onChange={() =>
+                                setRefineSymptoms((prev) =>
+                                  prev.includes(symptom)
+                                    ? prev.filter((s) => s !== symptom)
+                                    : [...prev, symptom]
+                                )
+                              }
+                            />
+                            <span>{symptom}</span>
+                          </label>
+                        ))}
+                      </div>
 
-    <button
-      onClick={handleRePredict}
-      disabled={refineLoading || refineSymptoms.length === 0}
-      className={`mt-4 px-4 py-2 rounded-md shadow ${
-        refineLoading || refineSymptoms.length === 0
-          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-          : "bg-green-600 hover:bg-green-700 text-white"
-      }`}
-    >
-      {refineLoading ? "Re-predicting..." : "Re-Predict"}
-    </button>
-  </div>
-)}
-
-
-
+                      <button
+                        onClick={handleRePredict}
+                        disabled={refineLoading || refineSymptoms.length === 0}
+                        className={`mt-4 px-4 py-2 rounded-md shadow ${
+                          refineLoading || refineSymptoms.length === 0
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        }`}
+                      >
+                        {refineLoading ? "Re-predicting..." : "Re-Predict"}
+                      </button>
+                    </div>
+                  )}
 
                   <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
                     <div className="flex items-center mb-2">
