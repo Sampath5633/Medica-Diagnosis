@@ -244,7 +244,7 @@ function Home() {
           {[
             { name: "Pruthvi Raj N M", role: "Project Manager" },
             { name: "Varun B M", role: "Research Analyst" },
-            { name: "Vivek Chandra", role: "Technical Support" }
+            { name: "Vikram Sandeep", role: "Mentor"}
           ].map((member, index) => (
             <div key={index} className="bg-white/50 backdrop-blur-sm rounded-lg p-4 border border-blue-300/30 shadow-sm hover:bg-white/70 transition-all duration-300">
               <div className="flex items-center gap-3">
