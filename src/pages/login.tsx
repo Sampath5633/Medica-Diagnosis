@@ -158,7 +158,7 @@ const Login = () => {
       const res = await axios.post('https://medica-backend-3-qa12.onrender.com/api/send-reset-code', {
         email: forgotPasswordData.email,
       });
-      setMessage("📧 Reset code sent to your email.");
+      setMessage("");
       setError("");
       setTimeLeft(600);
       setForgotPasswordStep(2);
@@ -275,7 +275,13 @@ const Login = () => {
                     textAlign: "center",
                     transition: "all 0.3s ease",
                   }}
-                  onClick={() => setForgotPasswordMode(true)}
+                  onClick={() => {
+                    setForgotPasswordMode(true);
+                    setForgotPasswordStep(1);
+                    setMessage("");
+                    setError("");
+                    setForgotPasswordData({ email: "", resetCode: "", newPassword: "", confirmPassword: "" });
+                  }}
                 >
                   Forgot Password?
                 </p>
@@ -357,7 +363,13 @@ const Login = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setForgotPasswordMode(false)}
+                onClick={() => {
+                  setForgotPasswordMode(false);
+                  setForgotPasswordStep(1);
+                  setMessage("");
+                  setError("");
+                  setForgotPasswordData({ email: "", resetCode: "", newPassword: "", confirmPassword: "" });
+                }}
                 style={{
                   ...styles.button,
                   marginTop: 10,
@@ -424,9 +436,20 @@ const Login = () => {
               >
                 Reset Password
               </button>
+              <p style={{ fontSize: "13px", color: "#fff", marginTop: "10px" }}>
+                {timeLeft > 0
+                  ? `⏳ Code expires in ${formatTime(timeLeft)}`
+                  : "⚠️ Code expired. Please resend."}
+              </p>
               <button
                 type="button"
-                onClick={() => setForgotPasswordMode(false)}
+                onClick={() => {
+                  setForgotPasswordMode(false);
+                  setForgotPasswordStep(1);
+                  setMessage("");
+                  setError("");
+                  setForgotPasswordData({ email: "", resetCode: "", newPassword: "", confirmPassword: "" });
+                }}
                 style={{
                   ...styles.button,
                   marginTop: 10,
